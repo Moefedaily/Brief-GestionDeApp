@@ -9,6 +9,7 @@
     <main>
         <?php
         switch ($section) {
+            
             case 'menu':
                 switch ($action) {
                     case 'login':
@@ -17,8 +18,8 @@
                     case 'register':
                         include 'auth/register.php';
                         break;
-                        case 'setPassword':
-                            include 'auth/setPassword.php';
+                        case 'SetPassword':
+                            include 'auth/SetPassword.php';
                             break;
                     default:
                         echo '<h2>Menu</h2>';

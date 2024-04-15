@@ -86,9 +86,9 @@ class UserController
         }
     }
 
-    private function generateUrl($email)
+    public static function generateUrl($email)
 {
-    return BASE_URL . 'setPassword?email=' . urlencode($email);
+    return BASE_URL.'SetPassword/email/'.urlencode($email);
 }
     private function enrollStudentInClass($userId, $classId)
     {
@@ -126,34 +126,50 @@ class UserController
         }
     }
 
-    public function setPassword()
+    public function setPassword($email)
 {
-    $email = $_GET['email'];
-    $password = $_POST['password'];
-    $confirmPassword = $_POST['confirm_password'];
+    try {
+        error_log("Attempting to set password for email: " . $email);
 
-    if ($password !== $confirmPassword) {
-        return [
-            'success' => false,
-            'error' => 'Passwords do not match'
-        ];
-    }
+        $user = $this->userRepository->findByEmail($email);
 
-    $user = $this->userRepository->findByEmail($email);
+        if ($user) {
+            error_log("User found for email: " . $email);
 
-    if ($user && empty($user->getPassword())) {
-        $user->setPassword(password_hash($password, PASSWORD_DEFAULT));
-        $this->userRepository->updatePass($user);
+            $password = $_POST['password'];
+            $confirmPassword = $_POST['confirm_password'];
+            error_log("Password: " . $password);
+            error_log("confirm_password: " . $confirmPassword);
 
-        return [
-            'success' => true,
-            'message' => 'Password set successfully'
-        ];
-    } else {
-        return [
-            'success' => false,
-            'error' => 'Invalid email or password already set'
-        ];
+            if ($password === $confirmPassword) {
+                error_log("Passwords match");
+
+                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                $user->setPassword($hashedPassword);
+
+                try {
+                    error_log("Attempting to update password for user: " . $email);
+                    $this->userRepository->updatePass($user);
+                    error_log("Password updated successfully for user: " . $email);
+
+                    return ['success' => true, 'message' => 'Password set successfully'];
+                } catch (Exception $e) {
+                    error_log('Error in UserController::setPassword() when updating password: ' . $e->getMessage());
+                    error_log('Error details: ' . $e->getTraceAsString());
+                    return ['success' => false, 'error' => 'An error occurred while setting the password'];
+                }
+            } else {
+                error_log("Passwords do not match for user: " . $email);
+                return ['success' => false, 'error' => 'Passwords do not match'];
+            }
+        } else {
+            error_log("User not found for email: " . $email);
+            return ['success' => false, 'error' => 'Invalid email or password already set'];
+        }
+    } catch (Exception $e) {
+        error_log('Error in UserController::setPassword(): ' . $e->getMessage());
+        error_log('Error details: ' . $e->getTraceAsString());
+        return ['success' => false, 'error' => 'An error occurred while setting the password'];
     }
 }
 

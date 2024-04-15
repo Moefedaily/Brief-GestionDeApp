@@ -10,7 +10,6 @@ $route = $_SERVER['REQUEST_URI'];
 $method = $_SERVER['REQUEST_METHOD'];
 $routeComposee = Routing::routeComposee($route);
 
-
 switch ($routeComposee[0]) {
     case 'dashboard':
         if ($routeComposee[1] === 'validateAttnd' && $routeComposee[2] !== null) {
@@ -29,6 +28,21 @@ switch ($routeComposee[0]) {
             }
         }
         break;
+
+        case 'SetPassword':
+            if (isset($routeComposee[1]) && $routeComposee[1] === 'email' && isset($routeComposee[2])) {
+                $email = urldecode($routeComposee[2]);
+                if ($method === 'GET') {
+                    $homeController = new HomeController();
+                    $homeController->showSetPasswordForm($email);
+                } elseif ($method === 'POST') {
+                    $userController = new UserController();
+                    $response = $userController->setPassword($email);
+                    header('Content-Type:application/json');
+                    echo json_encode($response);
+                }
+            } 
+    break;
 
         }
 
@@ -68,17 +82,6 @@ switch ($route) {
             $response = $userController->register($user, $classId);
             echo json_encode($response);
             exit;
-        }
-        break;
-    case HOME_URL .'setPassword':
-        if ($method === 'GET') {
-            $homeController = new HomeController();
-            $homeController->showSetPasswordForm();
-        } elseif ($method === 'POST') {
-            $userController = new UserController();
-            $response = $userController->setPassword();
-            header('Content-Type: application/json');
-            echo json_encode($response);
         }
         break;
 

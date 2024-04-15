@@ -28,10 +28,9 @@ class HomeController
     {
         $this->render('home', ['section' => 'menu', 'action' => 'register']);
     }
-    public function showSetPasswordForm(){
+    public function showSetPasswordForm($email){
 
-        $this->render('home', ['section' => 'menu', 'action' => 'setPassword']);
-
+        $this->render('home', ['section' => 'menu', 'action' => 'SetPassword', 'email' => $email]);
     }
     
     public function logout()
