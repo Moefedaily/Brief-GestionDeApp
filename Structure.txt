@@ -1,0 +1,44 @@
+Brief Gestion des apprenants/
+├── public/
+│   ├── index.php
+│   └── .htaccess
+├── App/
+│   ├── DbConnection/
+│   │   └── Db.php
+│   ├── router.php
+│   ├── Services/
+│   │   ├── Hydration.php
+│   │   └── Response.php
+│   ├── Models/
+│   │   ├── User.php
+│   │   ├── Course.php
+│   │   ├── Class.php
+│   │   └── ...
+│   ├── Repositories/
+│   │   ├── UserRepository.php
+│   │   ├── CourseRepository.php
+│   │   ├── ClassRepository.php
+│   │   └── ...
+│   ├── autoload.php
+│   ├── init.php
+│   ├── views/
+│   │   ├── include/
+│   │   │   ├── footer.php
+│   │   │   └── header.php
+│   │   ├── auth/
+│   │   │   ├── login.php
+│   │   │   └── register.php
+│   │   ├── dashboard.php
+│   │   ├── login.php
+│   │   ├── register.php
+│   │   └── ...
+│   ├── router.php
+│   └── src/
+│       └── js/
+│           ├── script.js
+│           ├── register.js
+│           └── login.js
+├── Config/
+│   └── database.php
+├── gestion_des_apprenants.sql
+└── Structure.txt
