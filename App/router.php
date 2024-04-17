@@ -25,6 +25,8 @@ switch ($routeComposee[0]) {
                 $courseId = $routeComposee[2];
                 $CoursesController = new CoursesController();
                 $response = $CoursesController->validateStudentAttendance($courseId);
+                header('Content-Type: application/json');
+                echo json_encode($response);
             }
         }
         break;

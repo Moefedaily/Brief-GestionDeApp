@@ -1,6 +1,8 @@
 <?php
 namespace Controllers;
 
+use DateTime;
+use DateTimeZone;
 use Exception;
 use Repositories\CoursesRepository;
 
@@ -12,25 +14,32 @@ class CoursesController
     {
         $this->coursesRepository = new CoursesRepository();
     }
+
+
+    /************************* Get Courses ***************************/
     public function getCourses()
     {
-        
         $userId = $_SESSION['user_id'];
-    $userRole = $_SESSION['role'];
-
-    if ($userRole === 0) {
-        $courses = $this->coursesRepository->getStudentCourses($userId);
-    } elseif($userRole === 1) {
-        $courses = $this->coursesRepository->getAllCourses();
-    }
+        $userRole = $_SESSION['role'];
+    
+        if ($userRole === 0) {
+            $courses = $this->coursesRepository->getStudentCourses($userId);
+            // Get Courses for the student
+        } elseif ($userRole === 1) {
+            $courses = $this->coursesRepository->getAllCourses();
+            // Get Courses for anyone else
+        }
+    
         $attendanceData = array_map(function ($course) use ($userId) {
             $isAttendanceValidated = $this->coursesRepository->isAttendanceValidated($userId, $course['course_id']);
             $attendanceStatus = $this->coursesRepository->getAttendanceStatus($userId, $course['course_id']);
             $randomCode = $this->coursesRepository->getCourseRandomCode($course['course_id']);
+    
             return [
                 'course_id' => $course['course_id'],
                 'isAttendanceValidated' => $isAttendanceValidated,
-                'attendanceStatus' => $attendanceStatus,
+                'presence' => $attendanceStatus ? $attendanceStatus['presence'] : null,
+                'delay' => $attendanceStatus ? $attendanceStatus['delay'] : null,
                 'randomCode' => $randomCode,
             ];
         }, $courses);
@@ -40,10 +49,13 @@ class CoursesController
             'attendanceData' => $attendanceData,
             'userRole' => $userRole,
         ];
+    
         return $data;
     }
+    /************************  Dashboard Data *********************************/
+
     public function getDashboardData()
-{
+    {
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
         return ['error' => 'Unauthorized'];
     }
@@ -53,8 +65,10 @@ class CoursesController
     header('Content-Type: application/json');
     echo json_encode($data);
     exit;
-}
-    
+    }
+
+    /************************ Validate Trainer Attendance **********************************/
+
     public function validateTrainerAttendance($courseId)
     {
 
@@ -64,7 +78,7 @@ class CoursesController
             $userRole = $_SESSION['role'];
     
             if ($userRole !== 1) {
-                return ['error' => 'Unauthorized'];
+                return ['error' => 'Not ALLOWED TO BE HERE'];
             }
     
             $randomCode = $this->coursesRepository->generateRandomCode();
@@ -88,6 +102,8 @@ class CoursesController
         }
     }
 
+    /************************  Validate Student Attendance *********************************/
+
     public function validateStudentAttendance($courseId)
 {
     try {
@@ -101,13 +117,13 @@ class CoursesController
         }
 
         $data = json_decode(file_get_contents('php://input'), true);
-        $submittedCode = $data['attendanceCode'] ?? null;
+        $submittedCode = $data['attendanceCode'];
 
-        error_log("Controller->Submitted code: " . $submittedCode);
+        error_log("Controller -> Submitted code: " . $submittedCode);
 
         $randomCode = $this->coursesRepository->getCourseRandomCode($courseId);
 
-        error_log("Controller->Random code: " . $randomCode);
+        error_log("Controller -> Random code: " . $randomCode);
 
         if ((string)$submittedCode !== (string)$randomCode) {
             error_log("Comparison result: " . ((string)$submittedCode !== (string)$randomCode));
@@ -116,27 +132,46 @@ class CoursesController
             exit;
         }
 
-        $course = $this->coursesRepository->getCourseById($courseId);
-        $courseStartTime = $course['course_startTime'];
-        $currentTime = date('H:i:s');
-        $timeDifference = strtotime($currentTime) - strtotime($courseStartTime);
 
-        if ($timeDifference <= 15 * 60) {
-            $this->coursesRepository->markStudentAttendance($userId, $courseId);
+        // to redo the caluclation
+        $course = $this->coursesRepository->getCourseById($courseId);
+        error_log('Course log: ' . print_r($course, true));
+
+        $courseStartTime = DateTime::createFromFormat('H:i:s', $course['course_start_time']);
+        error_log('course Time '.$course['course_start_time']);
+
+        $currentDateTime = new DateTime('now', new DateTimeZone('Europe/Paris')); 
+
+        error_log('curren Time '.print_r($currentDateTime,true));
+        
+        $timeDifference = $currentDateTime->getTimestamp() - $courseStartTime->getTimestamp();
+        error_log('Time diffrence '.$timeDifference);
+
+
+        
+        // time to minutes
+        $minutesDifference = $timeDifference / 60;
+
+        error_log('Time Minures '.$minutesDifference);
+        
+        if ($minutesDifference <= 15) {
+            $this->coursesRepository->markStudentAttendance($userId, $courseId, false);
             $response = [
                 'status' => 'success',
-                'message' => 'Attendance marked'
+                'message' => 'Attendance marked as present'
             ];
         } else {
-            $this->coursesRepository->markStudentLate($userId, $courseId);
+            $this->coursesRepository->markStudentAttendance($userId, $courseId, true);
             $response = [
                 'status' => 'success',
                 'message' => 'Attendance marked as late'
             ];
         }
+        //End Of the Calculation!!!! 
 
         header('Content-Type: application/json');
         echo json_encode($response);
+        error_log('Response data: ' . print_r($response, true));
         exit;
     } catch (Exception $e) {
         error_log('Error in validateStudentAttendance: ' . $e->getMessage());

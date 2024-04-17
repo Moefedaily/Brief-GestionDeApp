@@ -64,6 +64,7 @@ function renderCourseCards(courses, attendanceData, userRole, userId) {
             courseCardsContainer.appendChild(courseCard);
         });
     } else if (userRole === 1) {
+        //trainer Dashboard
     courses.forEach(course => {
         const courseCard = document.createElement('div');
         courseCard.classList.add('flex', 'flex-col', 'items-start', 'p-6', 'gap-7.5', 'w-full', 'bg-gray-100', 'rounded');
@@ -93,9 +94,9 @@ function renderCourseCards(courses, attendanceData, userRole, userId) {
         codeContainer.classList.add('text-lg', 'font-bold', 'text-black');
 
             const validateAttendanceButton = document.createElement('button');
-            const attendanceStatus = attendanceData.find(data => data.course_id === course.course_id)?.attendanceStatus;
+            const courseAttendanceData = attendanceData.find(data => data.course_id === course.course_id);
 
-            if (attendanceStatus === 'present') {
+            if (courseAttendanceData && courseAttendanceData.presence) {
                 validateAttendanceButton.classList.add('bg-green-500', 'text-white', 'px-4', 'py-2', 'rounded', 'cursor-not-allowed');
                 validateAttendanceButton.textContent = 'Attendance Validated';
                 validateAttendanceButton.disabled = true;
@@ -128,7 +129,7 @@ function renderCourseCards(courses, attendanceData, userRole, userId) {
 function validateStudentAttendance(courseId, attendanceCode) {
     console.log("Validating attendance for course ID:", courseId);
     console.log("Submitted attendance code:", attendanceCode);
-    
+
     fetch(`/cours/Brief-GestionDeApp/dashboard/validStudAttnd/${courseId}`, {
         method: 'POST',
         headers: {
@@ -136,15 +137,23 @@ function validateStudentAttendance(courseId, attendanceCode) {
         },
         body: JSON.stringify({ attendanceCode })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            return response.text().then(text => {
+                console.error('Server response:', text);
+                throw new Error('Error validating attendance');
+            });
+        }
+    })
     .then(data => {
         console.log(data);
         if (data.status === 'success') {
-            console.log(data);
-          //  alert(data.message);
+            console.log(data.message);
             fetchCourses();
         } else {
-            alert('From Where You Got This attendance code');
+            alert(data.error || 'Error validating attendance');
         }
     })
     .catch(error => {

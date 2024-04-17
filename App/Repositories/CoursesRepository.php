@@ -41,7 +41,7 @@ class CoursesRepository
         
 /************************************************************************************** */
 
-        public function getStudentCourses($userId)
+public function getStudentCourses($userId)
 {
     $query = "
         SELECT
@@ -58,18 +58,19 @@ class CoursesRepository
         WHERE
             a.user_id = :userId
     ";
-
     $stmt = $this->db->prepare($query);
     $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
     $stmt->execute();
-
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 
+
+
 /************************************************************************************** */
 
-    public function isAttendanceValidated($userId, $courseId)
+    public function 
+    isAttendanceValidated($userId, $courseId)
 {
     $query = "
         SELECT COUNT(*) AS count 
@@ -132,14 +133,12 @@ public function getCourseRandomCode($courseId)
 
 public function markTrainerAttendance($userId, $courseId)
 {
-    // check if the attendance record already exists
     $existingAttendance = $this->getAttendanceRecord($userId, $courseId);
 
     if ($existingAttendance) {
-        // Update the record
         $query = "
             UPDATE gda_attendance
-            SET attend_date = CURDATE(), attend_status = 'present'
+            SET presence = 1
             WHERE user_id = :userId AND course_id = :courseId
         ";
         $stmt = $this->db->prepare($query);
@@ -147,10 +146,9 @@ public function markTrainerAttendance($userId, $courseId)
         $stmt->bindParam(':courseId', $courseId, PDO::PARAM_INT);
         $stmt->execute();
     } else {
-        // Insert  new record
         $query = "
-            INSERT INTO gda_attendance (user_id, course_id, attend_date, attend_status)
-            VALUES (:userId, :courseId, CURDATE(), 'present')
+            INSERT INTO gda_attendance (user_id, course_id, presence)
+            VALUES (:userId, :courseId, 1)
         ";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
@@ -158,7 +156,6 @@ public function markTrainerAttendance($userId, $courseId)
         $stmt->execute();
     }
 }
-
 /************************************************************************************** */
 
 private function getAttendanceRecord($userId, $courseId)
@@ -180,7 +177,7 @@ private function getAttendanceRecord($userId, $courseId)
 public function getAttendanceStatus($userId, $courseId)
 {
     $query = "
-        SELECT attend_status
+        SELECT presence, delay
         FROM gda_attendance
         WHERE user_id = :userId AND course_id = :courseId
     ";
@@ -191,9 +188,17 @@ public function getAttendanceStatus($userId, $courseId)
     $stmt->execute();
 
     $result = $stmt->fetch(PDO::FETCH_ASSOC);
-    return $result ? $result['attend_status'] : null;
-}
 
+    if ($result) {
+        $attendanceStatus = [
+            'presence' => (bool) $result['presence'],
+            'delay' => (bool) $result['delay']
+        ];
+        return $attendanceStatus;
+    }
+
+    return null;
+}
 /************************************************************************************** */
 
 public function getCourseById($courseId)
@@ -215,42 +220,43 @@ public function getCourseById($courseId)
 
 // ...
 
-public function markStudentAttendance($userId, $courseId)
+public function markStudentAttendance($userId, $courseId, $isLate)
 {
-    $existingAttendance = $this->getStudentAttendanceRecord($userId, $courseId);
+    $existingAttendance = $this->getAttendanceRecord($userId, $courseId);
 
     if ($existingAttendance) {
         $query = "
             UPDATE gda_attendance
-            SET attend_date = CURDATE(), attend_status = 'present'
+            SET presence = 1, delay = :isLate
             WHERE user_id = :userId AND course_id = :courseId
         ";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
         $stmt->bindParam(':courseId', $courseId, PDO::PARAM_INT);
+        $stmt->bindValue(':isLate', $isLate, PDO::PARAM_BOOL);
         $stmt->execute();
     } else {
         $query = "
-            INSERT INTO gda_attendance (user_id, course_id, attend_date, attend_status)
-            VALUES (:userId, :courseId, CURDATE(), 'present')
+            INSERT INTO gda_attendance (user_id, course_id, presence, delay)
+            VALUES (:userId, :courseId, 1, :isLate)
         ";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
         $stmt->bindParam(':courseId', $courseId, PDO::PARAM_INT);
+        $stmt->bindValue(':isLate', $isLate, PDO::PARAM_BOOL);
         $stmt->execute();
     }
 }
-
 /************************************************************************************** */
 
 public function markStudentLate($userId, $courseId)
 {
-    $existingAttendance = $this->getStudentAttendanceRecord($userId, $courseId);
+    $existingAttendance = $this->getAttendanceRecord($userId, $courseId);
 
     if ($existingAttendance) {
         $query = "
             UPDATE gda_attendance
-            SET attend_date = CURDATE(), attend_status = 'late'
+            SET presence = 1, delay = 1
             WHERE user_id = :userId AND course_id = :courseId
         ";
         $stmt = $this->db->prepare($query);
@@ -259,8 +265,8 @@ public function markStudentLate($userId, $courseId)
         $stmt->execute();
     } else {
         $query = "
-            INSERT INTO gda_attendance (user_id, course_id, attend_date, attend_status)
-            VALUES (:userId, :courseId, CURDATE(), 'late')
+            INSERT INTO gda_attendance (user_id, course_id, presence, delay)
+            VALUES (:userId, :courseId, 1, 1)
         ";
         $stmt = $this->db->prepare($query);
         $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
@@ -268,22 +274,6 @@ public function markStudentLate($userId, $courseId)
         $stmt->execute();
     }
 }
-/************************************************************************************** */
-
-private function getStudentAttendanceRecord($userId, $courseId)
-{
-    $query = "
-        SELECT *
-        FROM gda_attendance
-        WHERE user_id = :userId AND course_id = :courseId
-    ";
-    $stmt = $this->db->prepare($query);
-    $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
-    $stmt->bindParam(':courseId', $courseId, PDO::PARAM_INT);
-    $stmt->execute();
-    return $stmt->fetch(PDO::FETCH_ASSOC);
-}
-
 /************************************************************************************** */
 
 

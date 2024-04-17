@@ -25,25 +25,43 @@ class UserController
     {
         $email = $user->getEmail();
         $password = $user->getPassword();
-
+    
+        error_log("Login attempt for email: " . $email);
+    
         $existingUser = $this->userRepository->findByEmail($email);
-
-        if ($existingUser && $existingUser->verifyPassword($password)) {
-            $roleUser = $existingUser->getRoleid();
-            $_SESSION['user_id'] = $existingUser->getUserid();
-            $_SESSION['role'] = $roleUser;
-
-            return [
-                'status' => 'success',
-                'role' => $roleUser
-            ];
+    
+        if ($existingUser) {
+            error_log("User found with email: " . $email);
+    
+            if ($existingUser->verifyPassword($password)) {
+                error_log("Password verified for user with email: " . $email);
+    
+                $roleUser = $existingUser->getRoleid();
+                $_SESSION['user_id'] = $existingUser->getUserid();
+                $_SESSION['role'] = $roleUser;
+    
+                error_log("User Login".$existingUser->getUserId());
+                error_log("Login successful for user with email: " . $email . ", role: " . $roleUser);
+    
+                return [
+                    'status' => 'success',
+                    'role' => $roleUser
+                ];
+            } else {
+                error_log("Password verification failed for user with email: " . $email);
+            }
         } else {
-            return [
-                'status' => 'error',
-                'message' => 'Identifiants incorrects'
-            ];
+            error_log("User not found with email: " . $email);
         }
+    
+        error_log("Login failed for email: " . $email);
+    
+        return [
+            'status' => 'error',
+            'message' => 'Identifiants incorrects'
+        ];
     }
+
     public function register(User $user, $classId)
     {
         try {
@@ -90,14 +108,16 @@ class UserController
 {
     return BASE_URL.'SetPassword/email/'.urlencode($email);
 }
-    private function enrollStudentInClass($userId, $classId)
+    private function enrollStudentInClass($userId, $classId)  
     {
+        error_log("enrol function userID = ".$userId);
+        error_log("enrol function classId = ".$classId);
         try {
             $coursesRepository = new CoursesRepository();
             $courses = $coursesRepository->getCoursesByClassId($classId);
-
+            error_log("enroll function: " . print_r($courses, true));
             foreach ($courses as $course) {
-                $coursesRepository->createAttendanceRecord($userId, $course['course_id']);
+            $coursesRepository->createAttendanceRecord($userId, $course['course_id']);
             }
         } catch (Exception $e) {
             throw $e;
@@ -107,9 +127,9 @@ class UserController
     private function sendWelcomeEmail($to, $firstName, $lastName, $passwordSetupUrl)
     {
         $subject = 'Welcome to Our Application';
-        $message = "Bonjour " . $firstName . " " . $lastName . ",\n\n"
+        $message = "Bonjour," . $firstName . " " . $lastName . ",\n\n"
             . "Confirmation de votre inscription :\n\n"
-            . "Merci de vous être inscrit à notre application.\n\n"
+            . "Merci de vous être inscrit à notre plateform.\n\n"
             . "Pour définir votre mot de passe, veuillez cliquer sur le lien suivant :\n"
             . $passwordSetupUrl . "\n\n"
             . "Cordialement,\n"
@@ -154,8 +174,6 @@ class UserController
 
                     return ['success' => true, 'message' => 'Password set successfully'];
                 } catch (Exception $e) {
-                    error_log('Error in UserController::setPassword() when updating password: ' . $e->getMessage());
-                    error_log('Error details: ' . $e->getTraceAsString());
                     return ['success' => false, 'error' => 'An error occurred while setting the password'];
                 }
             } else {
@@ -168,7 +186,6 @@ class UserController
         }
     } catch (Exception $e) {
         error_log('Error in UserController::setPassword(): ' . $e->getMessage());
-        error_log('Error details: ' . $e->getTraceAsString());
         return ['success' => false, 'error' => 'An error occurred while setting the password'];
     }
 }
