@@ -14,9 +14,9 @@ function loginUser() {
     .then(data => {
         console.log(data);
         if (data.status === "success") {
-            if (data.role === 0) {
+            if (data.role === 1) {
                 window.location.href = "/cours/Brief-GestionDeApp/dashboard";
-            } else if (data.role === 1) {
+            } else if (data.role === 2) {
                 window.location.href = "/cours/Brief-GestionDeApp/dashboard";
             }
         } else {

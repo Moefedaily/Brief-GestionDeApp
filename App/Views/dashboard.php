@@ -17,7 +17,6 @@
                 break;
             case 'delete':
                 break;
-            default:
                 echo 'Invalid dashboard action';
                 break;
         }

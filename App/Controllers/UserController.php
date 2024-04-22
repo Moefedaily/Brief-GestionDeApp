@@ -72,17 +72,19 @@ class UserController
                     'success' => false,
                     'error' => 'User with this email already exists'
                 ];
+                exit();
             }
-    
+            
             $user->setPassword(password_hash($user->getPassword(), PASSWORD_DEFAULT));
 
             $user->setActivation(0);
-            $user->setRoleid(0);
+            $user->setRoleid(1);
     
             error_log("First name: " . $user->getFirstName());
             error_log("Last name: " . $user->getLastName());
             error_log("Email: " . $user->getEmail());
     
+            error_log("User data before creating: " . print_r($user, true));
             $userId = $this->userRepository->create($user);
             error_log("New user created with ID: " . $userId);
     
@@ -90,17 +92,19 @@ class UserController
             error_log("Student enrolled in courses of class ID: " . $classId);
     
             $passwordSetupUrl = $this->generateUrl($user->getEmail());
-            $this->sendWelcomeEmail($user->getEmail(), $user->getFirstName(), $user->getLastName(), $passwordSetupUrl);            // Return the JSON response
+            $this->sendWelcomeEmail($user->getEmail(), $user->getFirstName(), $user->getLastName(), $passwordSetupUrl);
             return [
                 'success' => true,
                 'user_id' => $userId
             ];
+            exit();
         } catch (Exception $e) {
             error_log("Error in UserController::register(): " . $e->getMessage());
             return [
                 'success' => false,
-                'error' => 'An error occurred while registering the user.'
+                'error' => 'An error while registering the user.'
             ];
+            exit();
         }
     }
 
@@ -119,6 +123,9 @@ class UserController
             foreach ($courses as $course) {
             $coursesRepository->createAttendanceRecord($userId, $course['course_id']);
             }
+            $this->userRepository->addUserInClass($userId, $classId);
+            error_log("enroll function addUserInClass : " . print_r($courses, true));
+
         } catch (Exception $e) {
             throw $e;
         }
@@ -190,12 +197,54 @@ class UserController
     }
 }
 
+public function editStudent($userId)
+{
+    try {
+        $user = $this->userRepository->getUserById($userId);
+        if (!$user) {
+            return ['success' => false, 'error' => 'User not found'];
+        }
+
+        $user->setFirstName($_POST['first_name']);
+        $user->setLastName($_POST['last_name']);
+        $user->setEmail($_POST['email']);
+        $user->setActivation(isset($_POST['activation']) && $_POST['activation'] === '1' ? 1 : 0);
+
+        $this->userRepository->update($user);
+
+        return ['success' => true, 'message' => 'Student updated successfully'];
+    } catch (Exception $e) {
+        error_log('Error in UserController::editStudent(): ' . $e->getMessage());
+        return ['success' => false, 'error' => 'An error occurred while updating the student'];
+    }
+}
+
+public function deleteStudent($userId)
+{
+    try {
+        error_log("userId delete function : " .$userId);
+        $user = $this->userRepository->getUserById($userId);
+        error_log("user:: delete function : " .print_r($user,true));
+        if (!$user) {
+            return ['success' => false, 'error' => 'User not found'];
+        }
+
+        $this->userRepository->delete($userId);
+        
+
+        return ['success' => true, 'message' => 'Student deleted successfully'];
+    } catch (Exception $e) {
+        error_log('Error in UserController::deleteStudent(): ' . $e->getMessage());
+        return ['success' => false, 'error' => 'An error occurred while deleting the student'];
+    }
+}
+
     public function logout()
     {
         session_unset();
         session_destroy();
-        header('Location: /cours/Brief-GestionDeApp/login');
-        exit();
+        header('Location: ' . HOME_URL . 'login');
+         exit();
     }
 
 }

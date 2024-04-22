@@ -94,6 +94,8 @@ class Classes
         return $this;
     }
 
+   
+
     /**
      * Get the value of placesAvailable
      */ 

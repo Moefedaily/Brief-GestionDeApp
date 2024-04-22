@@ -40,7 +40,7 @@ final class Db
 
             $migrationExistante = TRUE;
             while ($migrationExistante === TRUE) {
-                $migration = __DIR__ . "/../asset/mvfv2.sql"; //  TO EDDDDDDIT
+                $migration = __DIR__ . "/../../Gestion-des-apprenants.sql"; //  TO EDDDDDDIT
                 if (file_exists($migration)) {
                     $sql = file_get_contents($migration);
                     $this->DB->query($sql);

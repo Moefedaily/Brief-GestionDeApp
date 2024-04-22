@@ -4,6 +4,7 @@ namespace Controllers;
 use DateTime;
 use DateTimeZone;
 use Exception;
+use Repositories\ClassesRepository;
 use Repositories\CoursesRepository;
 
 class CoursesController
@@ -22,14 +23,15 @@ class CoursesController
         $userId = $_SESSION['user_id'];
         $userRole = $_SESSION['role'];
     
-        if ($userRole === 0) {
+        if ($userRole === 1) {
             $courses = $this->coursesRepository->getStudentCourses($userId);
-            // Get Courses for the student
-        } elseif ($userRole === 1) {
+            // student
+        } elseif ($userRole === 2) {
             $courses = $this->coursesRepository->getAllCourses();
-            // Get Courses for anyone else
+            //  anyone else
         }
     
+
         $attendanceData = array_map(function ($course) use ($userId) {
             $isAttendanceValidated = $this->coursesRepository->isAttendanceValidated($userId, $course['course_id']);
             $attendanceStatus = $this->coursesRepository->getAttendanceStatus($userId, $course['course_id']);
@@ -44,10 +46,14 @@ class CoursesController
             ];
         }, $courses);
     
+        $classesRepository = new ClassesRepository();
+        $classes = $classesRepository->getAllClasses();
+        
         $data = [
             'courses' => $courses,
             'attendanceData' => $attendanceData,
             'userRole' => $userRole,
+            'classes' => $classes
         ];
     
         return $data;
@@ -77,7 +83,7 @@ class CoursesController
             $userId = $_SESSION['user_id'];
             $userRole = $_SESSION['role'];
     
-            if ($userRole !== 1) {
+            if ($userRole !== 2) {
                 return ['error' => 'Not ALLOWED TO BE HERE'];
             }
     
@@ -110,7 +116,7 @@ class CoursesController
         $userId = $_SESSION['user_id'];
         $userRole = $_SESSION['role']; 
 
-        if ($userRole !== 0) {
+        if ($userRole !== 1) {
             header('Content-Type: application/json');
             echo json_encode(['error' => 'Unauthorized']);
             exit;

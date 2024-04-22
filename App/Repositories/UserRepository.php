@@ -4,6 +4,7 @@ namespace Repositories;
 use DbConnexion\Db;
 use Models\User;
 use PDO;
+use PDOException;
 
 class UserRepository
 {
@@ -35,17 +36,29 @@ class UserRepository
 
     public function create(User $user)
     {
-        $stmt = $this->db->prepare("INSERT INTO gda_users (first_name, last_name, email, password, activation, role_id) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->execute([
-            $user->getFirstName(),
-            $user->getLastName(),
-            $user->getEmail(),
-            $user->getPassword(),
-            $user->getActivation(),
-            $user->getRoleid()
-        ]);
-        
-        return $this->db->lastInsertId();
+        try {
+            $stmt = $this->db->prepare("
+                INSERT INTO gda_users (first_name, last_name, password, email, activation, role_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ");
+    
+            $stmt->execute([
+                $user->getFirstName(),
+                $user->getLastName(),
+                $user->getPassword(),
+                $user->getEmail(),
+                $user->getActivation(),
+                $user->getRoleid()
+            ]);
+    
+            $userId = $this->db->lastInsertId();
+            error_log("User created with ID: " . $userId);
+    
+            return $userId;
+        } catch (PDOException $e) {
+            error_log("Error in UserRepository::create(): " . $e->getMessage());
+            throw $e;
+        }
     }
 
     public function login($email, $password)
@@ -63,32 +76,7 @@ class UserRepository
         return null;
     }
 
-    public function register($userData)
-    {
-        $query = "SELECT COUNT(*) FROM gda_users WHERE email = :email";
-        $stmt = $this->db->prepare($query);
-        $stmt->bindParam(':email', $userData['email']);
-        $stmt->execute();
-        $count = $stmt->fetchColumn();
-        
-        if ($count > 0) {
-            return false; // Email already exists
-        }
-        
-        $hashedPassword = password_hash($userData['password'], PASSWORD_DEFAULT);
-        
-        $query = "INSERT INTO gda_users (first_name, last_name, email, password, activation, role_id) 
-                  VALUES (:first_name, :last_name, :email, :password, :activation, :role_id)";
-        $stmt = $this->db->prepare($query);
-        $stmt->bindParam(':first_name', $userData['first_name']);
-        $stmt->bindParam(':last_name', $userData['last_name']);
-        $stmt->bindParam(':email', $userData['email']);
-        $stmt->bindParam(':password', $hashedPassword);
-        $stmt->bindValue(':activation', 0); 
-        $stmt->bindValue(':role_id', 0); 
-        
-        return $stmt->execute();
-    }
+    
     public function getUserById($userId)
     {
         $query = "SELECT * FROM gda_users WHERE user_id = :userId";
@@ -104,6 +92,8 @@ class UserRepository
             $user->setLastName($userData['last_name']);
             $user->setEmail($userData['email']);
             $user->setRoleid($userData['role_id']);
+
+            error_log("userREPO:: getUserById : " .print_r($user,true));
 
             return $user;
         }
@@ -133,4 +123,57 @@ public function updatePass(User $user)
             $user->getUserId()
         ]);
     }
+
+    public function addUserInClass($userId, $classId)
+    {
+        $stmt = $this->db->prepare("INSERT INTO gda_user_class (user_id, class_id) VALUES (?, ?)");
+        $stmt->execute([$userId, $classId]);
+    }
+    // ...
+
+public function update(User $user)
+{
+    $stmt = $this->db->prepare("
+        UPDATE gda_users SET 
+            first_name = ?,
+            last_name = ?,
+            email = ?,
+            activation = ?,
+            role_id = ?
+        WHERE user_id = ?
+    ");
+
+    $stmt->execute([
+        $user->getFirstName(),
+        $user->getLastName(),
+        $user->getEmail(),
+        $user->getActivation(),
+        $user->getRoleid(),
+        $user->getUserId()
+    ]);
 }
+
+
+public function delete($userId)
+{
+    $sql = "DELETE FROM gda_attendance WHERE user_id = :userId";
+    $stmt = $this->db->prepare($sql);
+    $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
+    $stmt->execute();
+
+    $sql = "DELETE FROM gda_user_class WHERE user_id = :userId";
+    $stmt = $this->db->prepare($sql);
+    $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
+    $stmt->execute();
+
+    $user = $this->getUserById($userId);
+    error_log("user delete function : " . print_r($user, true));
+
+    $sql = "DELETE FROM gda_users WHERE user_id = :userId";
+    $stmt = $this->db->prepare($sql);
+    $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
+    return $stmt->execute();
+}
+
+}
+
