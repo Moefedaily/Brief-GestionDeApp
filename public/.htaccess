@@ -1,0 +1,5 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine on
+    RewriteCond %{REQUEST_URI} !^/cours/Brief-GestionDeApp/public/index.php
+    RewriteRule ^(.*)$ /cours/Brief-GestionDeApp/public/index.php [L]
+</IfModule>
